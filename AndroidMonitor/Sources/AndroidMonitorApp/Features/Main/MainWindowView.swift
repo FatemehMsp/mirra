@@ -61,7 +61,7 @@ struct MainWindowView: View {
             while !Task.isCancelled {
                 let latest = await Task.detached { DeviceSnapshot.load() }.value
                 if latest != devices { devices = latest }
-                if selection == nil || !latest.contains(where: { $0.serial == selection }) {
+                if selection == nil || (!latest.contains(where: { $0.serial == selection }) && !iosDevices.contains(where: { $0.id == selection })) {
                     selection = latest.first(where: { $0.state == .device })?.serial
                 }
                 try? await Task.sleep(for: .seconds(2))

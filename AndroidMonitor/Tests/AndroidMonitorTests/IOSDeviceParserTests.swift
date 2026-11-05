@@ -38,3 +38,14 @@ final class IOSDeviceParserTests: XCTestCase {
         XCTAssertFalse(apps[1].isUserApp)
     }
 }
+
+final class IOSErrorMessageTests: XCTestCase {
+    func testLockedDeviceMessage() {
+        let text = "The developer disk image could not be mounted (error 12040)\nThe operation failed because the device was still locked."
+        XCTAssertTrue(IOSDeviceService.friendlyMessage(for: text).contains("locked"))
+    }
+
+    func testFallsBackToLastLine() {
+        XCTAssertEqual(IOSDeviceService.friendlyMessage(for: "first\nsomething odd\n"), "something odd")
+    }
+}

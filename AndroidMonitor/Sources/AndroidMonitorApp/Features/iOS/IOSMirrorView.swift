@@ -47,6 +47,7 @@ final class IOSMirrorModel: ObservableObject {
     func start() {
         Self.allowScreenCaptureDevices()
         poll = Task {
+            status = "Waiting for Camera permission… allow it in the system dialog."
             guard await AVCaptureDevice.requestAccess(for: .video) else {
                 status = "Camera access is needed to show the iPhone screen. Allow it in System Settings → Privacy & Security → Camera."
                 return

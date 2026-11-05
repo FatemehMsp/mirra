@@ -86,12 +86,31 @@ public struct IOSDeviceService: Sendable {
     private func json(_ arguments: [String], timeout: Duration = .seconds(60)) async throws -> Data {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("devicectl-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: file) }
-        let result = try await runner.run(CommandRequest(executable: xcrun, arguments: ["devicectl"] + arguments + ["--json-output", file.path], timeout: timeout))
-        if result.exitCode != 0 {
-            let text = String(decoding: result.stderr.isEmpty ? result.stdout : result.stderr, as: UTF8.self)
-            throw IOSServiceError.failed(text.split(separator: "\n").last.map(String.init) ?? "devicectl failed")
+        do {
+            let result = try await runner.run(CommandRequest(executable: xcrun, arguments: ["devicectl"] + arguments + ["--json-output", file.path], timeout: timeout))
+            if result.exitCode != 0 {
+                throw IOSServiceError.failed(Self.friendlyMessage(for: String(decoding: result.stderr.isEmpty ? result.stdout : result.stderr, as: UTF8.self)))
+            }
+        } catch let error as CommandError {
+            switch error {
+            case .nonZeroExit(_, let stderr): throw IOSServiceError.failed(Self.friendlyMessage(for: stderr))
+            case .timedOut: throw IOSServiceError.failed("The device did not respond in time. Unlock it and try again.")
+            case .launchFailed: throw IOSServiceError.xcodeMissing
+            case .cancelled: throw CancellationError()
+            }
         }
         return (try? Data(contentsOf: file)) ?? Data()
+    }
+
+    /// Turns devicectl's multi-line failures into one actionable sentence.
+    static func friendlyMessage(for output: String) -> String {
+        let lower = output.lowercased()
+        if lower.contains("locked") { return "The device is locked. Unlock it and keep the screen on, then reload." }
+        if lower.contains("developer mode") { return "Turn on Developer Mode on the device (Settings → Privacy & Security → Developer Mode), then reload." }
+        if lower.contains("developer disk image") || lower.contains("ddi") { return "Preparing the device failed (developer disk image). Unlock the device, tap Trust, and reload." }
+        if lower.contains("not paired") || lower.contains("trust") { return "Tap Trust on the device, then reload." }
+        let last = output.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.last { !$0.isEmpty }
+        return last ?? "devicectl failed"
     }
 
     public func devices() async throws -> [IOSDevice] {
