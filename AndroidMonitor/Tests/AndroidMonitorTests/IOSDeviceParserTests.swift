@@ -21,6 +21,16 @@ final class IOSDeviceParserTests: XCTestCase {
         XCTAssertTrue(devices[0].isConnected)
     }
 
+    func testUnreachableDeviceIsNotListed() {
+        XCTAssertTrue(IOSDeviceService.parseDevices(devicesJSON(reality: "physical", transport: "wired", tunnel: "unavailable")).isEmpty)
+    }
+
+    func testIdleReachableDeviceIsListedAsNotConnected() {
+        let devices = IOSDeviceService.parseDevices(devicesJSON(reality: "physical", transport: "wired", tunnel: "disconnected"))
+        XCTAssertEqual(devices.count, 1)
+        XCTAssertFalse(devices[0].isConnected)
+    }
+
     func testSimulatorsAreIgnored() {
         XCTAssertTrue(IOSDeviceService.parseDevices(devicesJSON(reality: "simulated", transport: "sameMachine", tunnel: "disconnected")).isEmpty)
     }

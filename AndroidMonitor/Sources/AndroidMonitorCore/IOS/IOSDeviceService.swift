@@ -8,7 +8,7 @@ public struct IOSDevice: Identifiable, Hashable, Sendable {
     public let model: String       // e.g. "iPhone 15 Pro"
     public let osVersion: String
     public let transport: Transport
-    public let isConnected: Bool   // tunnel is up; the device can be driven right now
+    public let isConnected: Bool   // tunnel is up right now; otherwise the device is reachable but idle
 }
 
 public struct IOSApp: Identifiable, Hashable, Sendable {
@@ -54,6 +54,8 @@ public struct IOSDeviceService: Sendable {
             let connection = (device["connectionProperties"] as? [String: Any]) ?? ((device["properties"] as? [String: Any])?["connection"] as? [String: Any]) ?? [:]
             let transportRaw = connection["transportType"] as? String ?? ""
             let tunnel = (connection["tunnelState"] as? String) ?? (connection["state"] as? String) ?? ""
+            // "unavailable" = paired before but not reachable now (unplugged, asleep). Do not list it.
+            if tunnel == "unavailable" { return nil }
             return IOSDevice(
                 id: id,
                 udid: hardware["udid"] as? String ?? id,
@@ -61,7 +63,7 @@ public struct IOSDeviceService: Sendable {
                 model: hardware["marketingName"] as? String ?? (hardware["productType"] as? String ?? "iOS device"),
                 osVersion: deviceProps["osVersionNumber"] as? String ?? "",
                 transport: IOSDevice.Transport(rawValue: transportRaw) ?? .other,
-                isConnected: tunnel == "connected" || tunnel == "available" || (connection["pairingState"] as? String) == "paired"
+                isConnected: tunnel == "connected"
             )
         }
     }
