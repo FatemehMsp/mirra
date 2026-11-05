@@ -61,7 +61,7 @@ public struct IOSDeviceService: Sendable {
                 model: hardware["marketingName"] as? String ?? (hardware["productType"] as? String ?? "iOS device"),
                 osVersion: deviceProps["osVersionNumber"] as? String ?? "",
                 transport: IOSDevice.Transport(rawValue: transportRaw) ?? .other,
-                isConnected: tunnel == "connected" || tunnel == "available"
+                isConnected: tunnel == "connected" || tunnel == "available" || (connection["pairingState"] as? String) == "paired"
             )
         }
     }
@@ -76,7 +76,7 @@ public struct IOSDeviceService: Sendable {
                 bundleID: bundle,
                 name: app["name"] as? String ?? bundle,
                 version: app["version"] as? String ?? "",
-                isUserApp: (app["removable"] as? Bool) ?? false
+                isUserApp: !bundle.hasPrefix("com.apple.") && ((app["removable"] as? Bool) ?? true) && !((app["appClip"] as? Bool) ?? false)
             )
         }
     }

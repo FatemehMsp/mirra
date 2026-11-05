@@ -52,6 +52,7 @@ final class IOSAppsModel: ObservableObject {
 struct IOSWorkspaceView: View {
     let device: IOSDevice
     @StateObject private var apps: IOSAppsModel
+    @StateObject private var mirror: IOSMirrorModel
     @State private var tab = 0
     @State private var query = ""
     @State private var userOnly = true
@@ -60,20 +61,32 @@ struct IOSWorkspaceView: View {
     init(device: IOSDevice) {
         self.device = device
         _apps = StateObject(wrappedValue: IOSAppsModel(device: device))
+        _mirror = StateObject(wrappedValue: IOSMirrorModel(udid: device.udid))
     }
 
     var body: some View {
         HSplitView {
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(device.name).font(.headline)
-                    Text("\(device.model) · iOS \(device.osVersion) · \(device.transport == .usb ? "USB" : "Wi‑Fi")").font(.caption2).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(device.name).font(.headline)
+                        Text("\(device.model) · iOS \(device.osVersion)").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer()
+                    IOSIconButton(icon: "camera.fill", help: "Save screenshot", tint: Theme.accent2) { mirror.saveScreenshot() }
+                    IOSIconButton(icon: "doc.on.clipboard", help: "Copy screenshot to clipboard", tint: Theme.accent) { mirror.copyScreenshot() }
+                    IOSIconButton(icon: mirror.isRecording ? "stop.circle.fill" : "record.circle", help: mirror.isRecording ? "Stop recording" : "Record screen", tint: .red) { mirror.toggleRecording() }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(.bar)
                 Divider()
-                IOSMirrorView(device: device)
+                IOSMirrorView(model: mirror)
+                    .overlay(alignment: .bottom) {
+                        if let notice = mirror.notice {
+                            Text(notice).font(.callout).padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(.regularMaterial, in: Capsule()).padding(.bottom, 14).allowsHitTesting(false)
+                        }
+                    }
             }
             .frame(minWidth: 380, idealWidth: 460)
 
@@ -155,5 +168,20 @@ struct IOSWorkspaceView: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct IOSIconButton: View {
+    let icon: String
+    let help: String
+    let tint: Color
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(tint).frame(width: 30, height: 26)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(tint.opacity(0.14)))
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }
