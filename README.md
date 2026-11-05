@@ -1,6 +1,6 @@
 # Android Monitor
 
-A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android phones over USB or Wi‑Fi. It is built on `adb`; nothing is installed on the phone.
+A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android phones over USB or Wi‑Fi, with basic iPhone / iPad support. Android is built on `adb`; iOS uses Apple's own tooling. Nothing is installed on the phone.
 
 <p align="center">
   <img src="docs/screenshots/files.png" alt="Mirror and file browser" width="100%">
@@ -34,6 +34,13 @@ A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android p
 **Logcat**
 - Colored by priority, search with highlighting, tag and level filters, pause, clear, save
 - Streams only while the tab is visible; buffers are capped and trimmed under memory pressure
+
+**iPhone / iPad** (view and manage; Apple does not allow remote control)
+- iPhones and iPads appear in the same sidebar when connected
+- Live screen (cable only, view-only), the same feed QuickTime uses; needs Camera permission
+- Apps: list, launch, uninstall, install `.ipa` (drag and drop or button)
+- Device info
+- Needs Xcode 15+ on the Mac (`devicectl`) and iOS 17+ on the device; the device must be unlocked and trusted
 
 **More**
 - Shell, device information, Data explorer with Normal / Debuggable (`run-as`) / Root (`su`, only after confirmation) access
@@ -112,6 +119,7 @@ Mirroring uses `adb exec-out screenrecord`, so latency depends on the phone's en
 
 ## Limitations
 
+- iOS: no touch or keyboard control, no file access, no logs yet; screen needs a USB cable
 - Typing in the mirror sends ASCII keystrokes; use ⌘V to enter other scripts
 - The clipboard bridge handles text only (no images or files)
 - One active device at a time; Apple Silicon only for now
