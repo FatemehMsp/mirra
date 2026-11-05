@@ -53,6 +53,7 @@ struct IOSWorkspaceView: View {
     let device: IOSDevice
     @StateObject private var apps: IOSAppsModel
     @StateObject private var mirror: IOSMirrorModel
+    @StateObject private var clipboard: IOSClipboardSync
     @State private var tab = 0
     @State private var query = ""
     @State private var userOnly = true
@@ -62,6 +63,7 @@ struct IOSWorkspaceView: View {
         self.device = device
         _apps = StateObject(wrappedValue: IOSAppsModel(device: device))
         _mirror = StateObject(wrappedValue: IOSMirrorModel(udid: device.udid))
+        _clipboard = StateObject(wrappedValue: IOSClipboardSync(deviceID: device.id))
     }
 
     var body: some View {
@@ -73,6 +75,7 @@ struct IOSWorkspaceView: View {
                         Text("\(device.model) · iOS \(device.osVersion)").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
+                    IOSIconButton(icon: clipboard.enabled ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath", help: clipboard.enabled ? "Clipboard sync is on (click to turn off)" : "Sync clipboard with the Mac", tint: clipboard.enabled ? Theme.accent : .gray) { clipboard.toggle() }
                     IOSIconButton(icon: "camera.fill", help: "Save screenshot", tint: Theme.accent2) { mirror.saveScreenshot() }
                     IOSIconButton(icon: "doc.on.clipboard", help: "Copy screenshot to clipboard", tint: Theme.accent) { mirror.copyScreenshot() }
                     IOSIconButton(icon: mirror.isRecording ? "stop.circle.fill" : "record.circle", help: mirror.isRecording ? "Stop recording" : "Record screen", tint: .red) { mirror.toggleRecording() }
@@ -82,7 +85,7 @@ struct IOSWorkspaceView: View {
                 Divider()
                 IOSMirrorView(model: mirror)
                     .overlay(alignment: .bottom) {
-                        if let notice = mirror.notice {
+                        if let notice = clipboard.status ?? mirror.notice {
                             Text(notice).font(.callout).padding(.horizontal, 14).padding(.vertical, 8)
                                 .background(.regularMaterial, in: Capsule()).padding(.bottom, 14).allowsHitTesting(false)
                         }
@@ -101,6 +104,7 @@ struct IOSWorkspaceView: View {
             }
             .frame(minWidth: 420)
         }
+        .onDisappear { clipboard.stop() }
         .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
             for provider in providers {
                 _ = provider.loadObject(ofClass: URL.self) { url, _ in

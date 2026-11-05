@@ -39,6 +39,7 @@ A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android p
 - iPhones and iPads appear in the same sidebar when connected
 - Live screen (view-only), the same feed QuickTime uses; needs Camera permission
 - Screenshot (save or copy to clipboard) and screen recording
+- Two-way text clipboard sync with the Mac (toggle in the header; uses `devicectl device pasteboard sync-with-host`)
 - Apps: list (user apps by default), launch, uninstall, install `.ipa` (drag and drop or button); needs Developer Mode on the device
 - Device info
 - Needs Xcode 15+ on the Mac (`devicectl`) and iOS 17+ on the device; the device must be unlocked and trusted
