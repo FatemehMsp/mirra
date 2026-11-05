@@ -86,7 +86,7 @@ struct IOSWorkspaceView: View {
                 IOSMirrorView(model: mirror)
                     .overlay(alignment: .bottom) {
                         if let notice = clipboard.status ?? mirror.notice {
-                            Text(notice).font(.callout).padding(.horizontal, 14).padding(.vertical, 8)
+                            Text(notice).font(.callout).multilineTextAlignment(.center).frame(maxWidth: 340).padding(.horizontal, 14).padding(.vertical, 8)
                                 .background(.regularMaterial, in: Capsule()).padding(.bottom, 14).allowsHitTesting(false)
                         }
                     }

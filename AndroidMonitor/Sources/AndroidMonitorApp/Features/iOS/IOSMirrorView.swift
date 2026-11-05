@@ -23,6 +23,8 @@ struct IOSMirrorView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { model.showViewOnlyHint() }
         .onAppear { model.start() }
         .onDisappear { model.stop() }
     }
@@ -92,6 +94,11 @@ final class IOSMirrorModel: ObservableObject {
         movieOutput.startRecording(to: url, recordingDelegate: recorder)
         isRecording = true
         show("Recording… press the stop button to finish.")
+    }
+
+    /// Clicking the mirrored screen cannot send touches (Apple provides no way), so say so instead of doing nothing.
+    func showViewOnlyHint() {
+        show("View-only: iOS cannot be touched from the Mac. To control it with your mouse and keyboard use Universal Control (Settings → General → AirPlay & Continuity).")
     }
 
     private func show(_ text: String) {
