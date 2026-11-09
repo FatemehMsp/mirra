@@ -1,8 +1,8 @@
 # Mirra
 
-**Your phone, on your Mac.** Mirror, debug and manage Android phones and iPhones / iPads in one native macOS app.
+**Your phone, on your Mac.** Mirror, debug and manage Android phones in one native macOS app, with an early preview of iPhone / iPad support.
 
-Mirra is a native macOS app (SwiftUI) for mirroring, controlling and inspecting Android phones over USB or Wi‑Fi, with basic iPhone / iPad support. Android is built on `adb`; iOS uses Apple's own tooling. Nothing is installed on the phone.
+Mirra is a native macOS app (SwiftUI) for mirroring, controlling and inspecting Android phones over USB or Wi‑Fi, with an early preview of iPhone / iPad support. Android is built on `adb`; iOS uses Apple's own tooling. Nothing is installed on the phone.
 
 <p align="center">
   <img src="docs/screenshots/files.png" alt="Mirror and file browser" width="100%">
@@ -39,14 +39,21 @@ Mirra is a native macOS app (SwiftUI) for mirroring, controlling and inspecting 
 - App picker and minimum level, colored level badges, search highlighting, pause, clear, save
 - Streams only while the tab is visible; buffers are capped and trimmed under memory pressure
 
-**iPhone / iPad** (view and manage; Apple does not allow remote control)
-- iPhones and iPads appear in the same sidebar when connected
-- Live screen (view-only), the same feed QuickTime uses; needs Camera permission
-- Screenshot (save or copy to clipboard) and screen recording
-- Two-way text clipboard sync with the Mac (toggle in the header; uses `devicectl device pasteboard sync-with-host`)
-- Apps: list (user apps by default), launch, uninstall, install `.ipa` (drag and drop or button); needs Developer Mode on the device
-- Device info
-- Needs Xcode 15+ on the Mac (`devicectl`) and iOS 17+ on the device; the device must be unlocked and trusted
+**iPhone / iPad: preview** ⚠️
+
+iOS support is early and lighter than Android. Apple does not let a Mac send touches or keystrokes to an iPhone or iPad, so the screen is view-only.
+
+| Feature | Status | Needs |
+|---|---|---|
+| Device in the sidebar, device info | Works | Xcode 15+ on the Mac, iOS 17+, device unlocked and trusted |
+| Live screen (view-only, same feed as QuickTime) | Works | USB cable, Camera permission for Mirra |
+| Screenshot (save / copy) and screen recording | Built, lightly tested | Live screen running |
+| Two-way text clipboard sync (toggle in the header) | Works (tested with `devicectl`) | Device reachable |
+| Apps list | Works | Developer Mode on the device |
+| Launch, uninstall, install `.ipa` | Not verified yet | Developer Mode on the device |
+| Touch / keyboard control, files, logs | Not possible / not available | Use macOS Universal Control to drive an iPad with your Mac's mouse and keyboard |
+
+Known issues: the connection label (USB / Wi‑Fi) reported by `devicectl` is not always accurate, and devices that sleep or are locked drop out of the list until they are reachable again.
 
 **More**
 - Shell, device information, Data explorer with Normal / Debuggable (`run-as`) / Root (`su`, only after confirmation) access
@@ -125,7 +132,7 @@ Mirroring uses `adb exec-out screenrecord`, so latency depends on the phone's en
 
 ## Limitations
 
-- iOS: no touch or keyboard control, no file access, no logs yet; screen needs a USB cable
+- iOS is a preview: view-only screen, no file access or logs; app management needs Developer Mode (see the table above)
 - Typing in the mirror sends ASCII keystrokes; use ⌘V to enter other scripts
 - The clipboard bridge handles text only (no images or files)
 - One active device at a time; Apple Silicon only for now
