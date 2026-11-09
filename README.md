@@ -31,8 +31,10 @@ A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android p
 - Grid with real app icons, search, and User / System / Debuggable filters
 - Launch, force stop, app info, clear data, uninstall, install APK, save APK
 
-**Logcat**
-- Colored by priority, search with highlighting, tag and level filters, pause, clear, save
+**Logcat** (Android Studio style)
+- Package column: each line shows the app it came from (pid → process name)
+- One query box: `package:com.app tag:OkHttp level:warn -tag:Choreographer is:crash timeout`, with exact (`tag=:`) and regex (`tag~:`) matches; same key twice is OR, different keys AND
+- App picker and minimum level, colored level badges, search highlighting, pause, clear, save
 - Streams only while the tab is visible; buffers are capped and trimmed under memory pressure
 
 **iPhone / iPad** (view and manage; Apple does not allow remote control)
