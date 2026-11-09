@@ -11,7 +11,7 @@ struct MainWindowView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         Image(systemName: "iphone.and.arrow.forward").font(.title3).foregroundStyle(Theme.gradient)
-                        Text("Android Monitor").font(.headline)
+                        Text(AppIdentity.name).font(.headline)
                     }
                     .padding(.bottom, 4)
                     Text("DEVICES · \(devices.count + iosDevices.count)").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)

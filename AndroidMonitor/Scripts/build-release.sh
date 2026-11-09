@@ -12,7 +12,7 @@ xcodebuild build \
   -destination 'platform=macOS,arch=arm64' \
   -derivedDataPath DerivedDataRelease \
   CODE_SIGNING_ALLOWED=NO
-cp -R "DerivedDataRelease/Build/Products/Release/Android Monitor.app" dist/
-chmod 755 "dist/Android Monitor.app/Contents/Resources/adb"
-codesign --force --deep --sign - "dist/Android Monitor.app"
+cp -R "DerivedDataRelease/Build/Products/Release/Mirra.app" dist/
+chmod 755 "dist/Mirra.app/Contents/Resources/adb"
+codesign --force --deep --sign - "dist/Mirra.app"
 

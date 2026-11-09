@@ -1,6 +1,8 @@
-# Android Monitor
+# Mirra
 
-A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android phones over USB or Wi‑Fi, with basic iPhone / iPad support. Android is built on `adb`; iOS uses Apple's own tooling. Nothing is installed on the phone.
+**Your phone, on your Mac.** Mirror, debug and manage Android phones and iPhones / iPads in one native macOS app.
+
+Mirra is a native macOS app (SwiftUI) for mirroring, controlling and inspecting Android phones over USB or Wi‑Fi, with basic iPhone / iPad support. Android is built on `adb`; iOS uses Apple's own tooling. Nothing is installed on the phone.
 
 <p align="center">
   <img src="docs/screenshots/files.png" alt="Mirror and file browser" width="100%">
@@ -53,12 +55,12 @@ A native macOS app (SwiftUI) for mirroring, controlling and inspecting Android p
 
 ## Download
 
-Grab `AndroidMonitor.dmg` from the [Releases](../../releases) page, open it and drag **Android Monitor** to Applications.
+Grab `Mirra.dmg` from the [Releases](../../releases) page, open it and drag **Mirra** to Applications.
 
 - **Not notarized.** The app is not notarized (there is no paid Apple Developer account behind it), so macOS blocks the first launch. Either right-click the app → **Open** → **Open**, or run:
 
   ```bash
-  xattr -dr com.apple.quarantine "/Applications/Android Monitor.app"
+  xattr -dr com.apple.quarantine "/Applications/Mirra.app"
   ```
 
 - **Apple Silicon and macOS 14 or newer only.**
@@ -75,8 +77,8 @@ Grab `AndroidMonitor.dmg` from the [Releases](../../releases) page, open it and 
 
 ```bash
 cd AndroidMonitor
-./Scripts/build-release.sh      # fetches adb, generates the Xcode project, builds dist/Android Monitor.app
-open "dist/Android Monitor.app"
+./Scripts/build-release.sh      # fetches adb, generates the Xcode project, builds dist/Mirra.app
+open "dist/Mirra.app"
 ```
 
 The build is ad-hoc signed for local use. Distribution (Developer ID signing, notarization, DMG) is not set up yet; see `Scripts/create-dmg.sh`.

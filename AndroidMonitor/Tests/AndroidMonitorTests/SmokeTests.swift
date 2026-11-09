@@ -3,7 +3,7 @@ import XCTest
 
 final class SmokeTests: XCTestCase {
     func testTestTargetLoadsApplicationModule() {
-        XCTAssertEqual(AppIdentity.name, "Android Monitor")
+        XCTAssertEqual(AppIdentity.name, "Mirra")
     }
 }
 

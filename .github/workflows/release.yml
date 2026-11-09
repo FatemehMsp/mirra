@@ -60,8 +60,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
-          gh release create "$VERSION" dist/AndroidMonitor.dmg dist/AndroidMonitor.dmg.sha256 \
+          gh release create "$VERSION" dist/Mirra.dmg dist/Mirra.dmg.sha256 \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Android Monitor ${VERSION#v}" \
+            --title "Mirra ${VERSION#v}" \
             --generate-notes \
-            --notes "**Install:** open the DMG and drag *Android Monitor* to Applications. The app is not notarized: on first launch right-click → Open, or run \`xattr -dr com.apple.quarantine \"/Applications/Android Monitor.app\"\`. Apple Silicon, macOS 14+."
+            --notes "**Install:** open the DMG and drag *Mirra* to Applications. The app is not notarized: on first launch right-click → Open, or run \`xattr -dr com.apple.quarantine \"/Applications/Mirra.app\"\`. Apple Silicon, macOS 14+."
