@@ -1,6 +1,6 @@
 import AppKit
 
-// Renders the Android Monitor app icon (phone mirrored on a monitor) into an appiconset.
+// Renders the Mirra app icon (phone mirrored on a monitor) into an appiconset.
 func render(_ px: Int) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8, samplesPerPixel: 4,
                                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!

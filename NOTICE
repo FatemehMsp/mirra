@@ -1,5 +1,5 @@
-Android Monitor
-Copyright (c) 2026 Android Monitor contributors. Licensed under the MIT License (see LICENSE).
+Mirra
+Copyright (c) 2026 Mirra contributors. Licensed under the MIT License (see LICENSE).
 
 Third-party software
 ====================
@@ -10,7 +10,7 @@ Android Debug Bridge (adb)
   Source: https://android.googlesource.com/platform/packages/modules/adb
   Licensed under the Apache License, Version 2.0, reproduced below.
 
-  The adb binary is bundled unmodified inside Android Monitor.app (Contents/Resources/adb)
+  The adb binary is bundled unmodified inside Mirra.app (Contents/Resources/adb)
   in release builds. It is not stored in this source repository; the build downloads it from Google.
   adb itself includes further third-party components; see the NOTICE file shipped with
   Android SDK Platform-Tools: https://developer.android.com/tools/releases/platform-tools
