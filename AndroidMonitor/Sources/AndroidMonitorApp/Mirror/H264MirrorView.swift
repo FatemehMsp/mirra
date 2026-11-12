@@ -69,8 +69,6 @@ struct H264MirrorView: NSViewRepresentable {
             }
         }
         private var deviceSize = CGSize(width: 1080, height: 2400)
-        private var recording: FileHandle?
-        private var observers: [NSObjectProtocol] = []
 
         init(serial: String) { self.serial = serial; self.input = RemoteInput(serial: serial); self.clipboard = PhoneClipboard(serial: serial) }
 
@@ -89,7 +87,6 @@ struct H264MirrorView: NSViewRepresentable {
                     ])
                     for try await chunk in stream {
                         guard !Task.isCancelled else { return }
-                        try? recording?.write(contentsOf: chunk)
                         flushTask?.cancel()
                         display(parser.append(chunk), on: displayLayer)
                         // screenrecord only emits on screen change, so the parser would hold the newest frame
@@ -122,22 +119,6 @@ struct H264MirrorView: NSViewRepresentable {
             startClipboardSync()
             let displayLayer = surface.displayLayer
             self.displayLayer = displayLayer
-            observers.append(NotificationCenter.default.addObserver(forName: MirrorNotification.startRecording, object: nil, queue: .main) { [weak self] note in
-                let target = note.userInfo?["serial"] as? String
-                let url = note.userInfo?["url"] as? URL
-                MainActor.assumeIsolated {
-                    guard let self, target == self.serial, let url else { return }
-                    FileManager.default.createFile(atPath: url.path, contents: nil)
-                    self.recording = try? FileHandle(forWritingTo: url)
-                }
-            })
-            observers.append(NotificationCenter.default.addObserver(forName: MirrorNotification.stopRecording, object: nil, queue: .main) { [weak self] note in
-                let target = note.userInfo?["serial"] as? String
-                MainActor.assumeIsolated {
-                    guard let self, target == self.serial else { return }
-                    try? self.recording?.close(); self.recording = nil
-                }
-            })
             Task { [adb, serial] in
                 if let out = try? await adb.run(serial: serial, arguments: ["shell", "wm", "size"], timeout: .seconds(5)).stdout,
                    let line = String(decoding: out, as: UTF8.self).split(separator: "\n").last(where: { $0.contains("x") }),
@@ -166,8 +147,6 @@ struct H264MirrorView: NSViewRepresentable {
         func stop() {
             task?.cancel(); task = nil; flushTask?.cancel(); clipboardSync?.cancel(); input.stop(); clipboard.stop()
             screenshotTask?.cancel(); screenshotTask = nil
-            observers.forEach(NotificationCenter.default.removeObserver); observers.removeAll()
-            try? recording?.close(); recording = nil
         }
 
         /// Maps a view point into device pixels, accounting for the aspect-fit letterbox.
@@ -184,6 +163,8 @@ struct H264MirrorView: NSViewRepresentable {
             guard viewSize.width > 0, viewSize.height > 0 else { return }
             let (x1, y1) = devicePoint(from, viewSize: viewSize)
             let (x2, y2) = devicePoint(to, viewSize: viewSize)
+            // Mark the gesture in the active recording (mouse taps never show up on their own).
+            ScreenRecorderStore.shared.recordMirrorTouch(serial: serial, from: (x1, y1), to: (x2, y2))
             if hypot(Double(x2 - x1), Double(y2 - y1)) > 24 {
                 input.swipe(x1, y1, x2, y2, durationMs: max(80, min(Int(duration * 1000), 800)))
             } else {
@@ -231,8 +212,10 @@ struct H264MirrorView: NSViewRepresentable {
                 guard !Task.isCancelled, let self, abs(self.scrollAccumulator) > 1 else { return }
                 let (x, y) = self.devicePoint(point, viewSize: viewSize)
                 let travel = Int(max(-self.deviceSize.height * 0.5, min(self.deviceSize.height * 0.5, self.scrollAccumulator * 12)))
+                let targetY = min(max(y + travel, 0), Int(self.deviceSize.height))
                 self.scrollAccumulator = 0
-                self.input.swipe(x, y, x, min(max(y + travel, 0), Int(self.deviceSize.height)), durationMs: 180)
+                ScreenRecorderStore.shared.recordMirrorTouch(serial: self.serial, from: (x, y), to: (x, targetY))
+                self.input.swipe(x, y, x, targetY, durationMs: 180)
             }
         }
     }
