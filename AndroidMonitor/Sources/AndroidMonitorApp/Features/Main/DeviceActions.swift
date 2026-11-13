@@ -1,11 +1,6 @@
 import AppKit
 import SwiftUI
 
-enum MirrorNotification {
-    static let startRecording = Notification.Name("AndroidMonitor.StartRecording")
-    static let stopRecording = Notification.Name("AndroidMonitor.StopRecording")
-}
-
 @MainActor
 enum DeviceActions {
     static func screenshot(serial: String) {
@@ -26,16 +21,6 @@ enum DeviceActions {
             let adb = ADBClient(adbURL: AppADB.url)
             _ = try? await adb.run(serial: serial, arguments: ["shell", "input", "text", safe], timeout: .seconds(10))
         }
-    }
-
-    static func startRecording(serial: String) {
-        let panel = NSSavePanel(); panel.nameFieldStringValue = "recording-\(serial).h264"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        NotificationCenter.default.post(name: MirrorNotification.startRecording, object: nil, userInfo: ["serial": serial, "url": url])
-    }
-
-    static func stopRecording(serial: String) {
-        NotificationCenter.default.post(name: MirrorNotification.stopRecording, object: nil, userInfo: ["serial": serial])
     }
 }
 
