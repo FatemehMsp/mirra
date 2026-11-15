@@ -12,7 +12,7 @@ struct IOSMirrorView: View {
         ZStack {
             Theme.backdrop
             if model.running {
-                IOSPreview(session: model.session, input: input)
+                IOSPreview(session: model.session, input: input, onUncontrolledClick: { model.showViewOnlyHint() })
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.18), lineWidth: 2))
                     .shadow(color: Theme.accent.opacity(0.25), radius: 24)
@@ -158,14 +158,16 @@ final class IOSMirrorModel: ObservableObject {
 private struct IOSPreview: NSViewRepresentable {
     let session: AVCaptureSession
     let input: IOSInputController
+    /// Called for clicks that cannot be sent to the device (touch control off).
+    let onUncontrolledClick: () -> Void
 
     func makeNSView(context: Context) -> IOSMirrorSurfaceView {
         let view = IOSMirrorSurfaceView()
-        view.attach(session: session, input: input)
+        view.attach(session: session, input: input, onUncontrolledClick: onUncontrolledClick)
         return view
     }
     func updateNSView(_ nsView: IOSMirrorSurfaceView, context: Context) {
-        nsView.attach(session: session, input: input)
+        nsView.attach(session: session, input: input, onUncontrolledClick: onUncontrolledClick)
     }
 }
 
@@ -174,11 +176,13 @@ private struct IOSPreview: NSViewRepresentable {
 final class IOSMirrorSurfaceView: NSView {
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private weak var input: IOSInputController?
+    private var onUncontrolledClick: (() -> Void)?
     private var downPoint: CGPoint?
     private var downTime: TimeInterval = 0
 
-    func attach(session: AVCaptureSession, input: IOSInputController) {
+    func attach(session: AVCaptureSession, input: IOSInputController, onUncontrolledClick: @escaping () -> Void) {
         self.input = input
+        self.onUncontrolledClick = onUncontrolledClick
         guard previewLayer?.session !== session else { return }
         wantsLayer = true
         let layer = AVCaptureVideoPreviewLayer(session: session)
@@ -223,8 +227,13 @@ final class IOSMirrorSurfaceView: NSView {
     override func mouseUp(with event: NSEvent) {
         guard let start = downPoint else { return }
         downPoint = nil
-        guard let input, input.isReady else { return }
+        guard let input else { return }
         let end = convert(event.locationInWindow, from: nil)
+        // Without touch control the click cannot reach the device — explain the options instead.
+        guard input.isReady else {
+            onUncontrolledClick?()
+            return
+        }
         guard let from = screenPoint(start), let to = screenPoint(end) else { return }
         if hypot(to.x - from.x, to.y - from.y) > 14 {
             input.drag(from: from, to: to, durationMs: max(80, min(Int((event.timestamp - downTime) * 1000), 1500)))
