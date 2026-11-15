@@ -51,10 +51,16 @@ enum USBMux {
 
     /// Devices currently visible to usbmuxd (serial = UDID).
     static func devices() throws -> [Device] {
-        let response = try exchange(["MessageType": "ListDevices"])
+        try devices(in: exchange(["MessageType": "ListDevices"]))
+    }
+
+    /// Parses a ListDevices reply. usbmuxd nests the serial number under `Properties`,
+    /// with only `DeviceID` (and `MessageType`) at the entry level.
+    static func devices(in response: [String: Any]) -> [Device] {
         let list = (response["DeviceList"] as? [[String: Any]]) ?? []
         return list.compactMap { entry in
-            guard let serial = entry["SerialNumber"] as? String,
+            let properties = entry["Properties"] as? [String: Any] ?? entry
+            guard let serial = properties["SerialNumber"] as? String,
                   let id = (entry["DeviceID"] as? NSNumber)?.intValue else { return nil }
             return Device(id: id, serial: serial)
         }
@@ -178,7 +184,10 @@ final class USBMuxPortForwarder: @unchecked Sendable {
             }
         }
         self.listener = listener
-        listener.start(queue: .main)
+        // Deliver listener callbacks on the forwarder's own queue, not the main queue:
+        // start() blocks the calling thread (usually the main actor) on the semaphore below,
+        // so a main-queue callback could never fire and start would always time out.
+        listener.start(queue: queue)
         guard ready.wait(timeout: .now() + 5) == .success, let port = localPort else {
             throw USBMux.USBMuxError.socketFailed
         }

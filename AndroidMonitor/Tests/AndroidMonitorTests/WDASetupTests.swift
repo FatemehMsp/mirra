@@ -79,4 +79,25 @@ final class USBMuxTests: XCTestCase {
         let text = String(decoding: data, as: UTF8.self)
         XCTAssertTrue(text.contains("ListDevices"))
     }
+
+    func testDevicesParseNestedSerialFromListDevicesReply() {
+        // Captured from a real usbmuxd: the serial lives under Properties, not at entry level.
+        let reply: [String: Any] = ["DeviceList": [[
+            "MessageType": "Attached",
+            "DeviceID": 27,
+            "Properties": [
+                "ConnectionType": "USB",
+                "DeviceID": 27,
+                "SerialNumber": "00008030-000E50283C6B802E",
+            ],
+        ]]]
+        let devices = USBMux.devices(in: reply)
+        XCTAssertEqual(devices.count, 1)
+        XCTAssertEqual(devices.first?.serial, "00008030-000E50283C6B802E")
+        XCTAssertEqual(devices.first?.id, 27)
+    }
+
+    func testDevicesEmptyWhenReplyHasNoDeviceList() {
+        XCTAssertEqual(USBMux.devices(in: ["MessageType": "Result", "Number": 0]), [])
+    }
 }
