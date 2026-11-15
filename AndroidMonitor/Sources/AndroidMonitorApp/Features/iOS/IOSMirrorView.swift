@@ -2,16 +2,17 @@ import AVFoundation
 import CoreMediaIO
 import SwiftUI
 
-/// Live, view-only screen of an iPhone / iPad connected by cable, the same feed QuickTime uses.
-/// iOS does not allow remote touch or keyboard input, so this view only displays.
+/// Live screen of an iPhone / iPad connected by cable, the same feed QuickTime uses.
+/// Touch control (opt-in, through WebDriverAgent) turns clicks into taps when enabled.
 struct IOSMirrorView: View {
     @ObservedObject var model: IOSMirrorModel
+    @ObservedObject var input: IOSInputController
 
     var body: some View {
         ZStack {
             Theme.backdrop
             if model.running {
-                IOSPreview(session: model.session)
+                IOSPreview(session: model.session, input: input)
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.18), lineWidth: 2))
                     .shadow(color: Theme.accent.opacity(0.25), radius: 24)
@@ -96,9 +97,9 @@ final class IOSMirrorModel: ObservableObject {
         show("Recording… press the stop button to finish.")
     }
 
-    /// Clicking the mirrored screen cannot send touches (Apple provides no way), so say so instead of doing nothing.
+    /// When touch control is off, clicking the mirrored screen explains the options instead of doing nothing.
     func showViewOnlyHint() {
-        show("View-only: iOS cannot be touched from the Mac. To control it with your mouse and keyboard use Universal Control (Settings → General → AirPlay & Continuity).")
+        show("View-only right now: click the hand button to enable touch control, or use Universal Control (Settings → General → AirPlay & Continuity) to drive the phone with your Mac's mouse and keyboard.")
     }
 
     private func show(_ text: String) {
@@ -156,16 +157,88 @@ final class IOSMirrorModel: ObservableObject {
 
 private struct IOSPreview: NSViewRepresentable {
     let session: AVCaptureSession
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        view.wantsLayer = true
+    let input: IOSInputController
+
+    func makeNSView(context: Context) -> IOSMirrorSurfaceView {
+        let view = IOSMirrorSurfaceView()
+        view.attach(session: session, input: input)
+        return view
+    }
+    func updateNSView(_ nsView: IOSMirrorSurfaceView, context: Context) {
+        nsView.attach(session: session, input: input)
+    }
+}
+
+/// The preview layer plus mouse routing. Points are converted to video-normalized coordinates
+/// via the layer itself (so aspect-fit letterboxing is handled), then scaled to screen points.
+final class IOSMirrorSurfaceView: NSView {
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    private weak var input: IOSInputController?
+    private var downPoint: CGPoint?
+    private var downTime: TimeInterval = 0
+
+    func attach(session: AVCaptureSession, input: IOSInputController) {
+        self.input = input
+        guard previewLayer?.session !== session else { return }
+        wantsLayer = true
         let layer = AVCaptureVideoPreviewLayer(session: session)
         layer.videoGravity = .resizeAspect
         layer.backgroundColor = NSColor.black.cgColor
-        view.layer = layer
-        return view
+        self.layer = layer
+        previewLayer = layer
     }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    override func layout() {
+        super.layout()
+        previewLayer?.frame = bounds
+    }
+
+    override var acceptsFirstResponder: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// Maps a view point to screen points: the video is the screen, so aspect-fit letterboxing
+    /// plus the WDA-reported screen size are all the math needed.
+    private func screenPoint(_ point: CGPoint) -> (x: Double, y: Double)? {
+        guard let input, let layer = previewLayer, input.screenSize.width > 0, input.screenSize.height > 0,
+              layer.bounds.width > 0, layer.bounds.height > 0 else { return nil }
+        let bounds = layer.bounds
+        let aspect = CGFloat(input.screenSize.width / input.screenSize.height)
+        let fitHeight = min(bounds.width / aspect, bounds.height)
+        let contentWidth = aspect * fitHeight
+        let originX = (bounds.width - contentWidth) / 2
+        let originY = (bounds.height - fitHeight) / 2
+        guard point.x >= originX, point.x <= originX + contentWidth,
+              point.y >= originY, point.y <= originY + fitHeight else { return nil }
+        let normalizedX = (point.x - originX) / contentWidth
+        let normalizedY = (point.y - originY) / fitHeight
+        return (Double(normalizedX * CGFloat(input.screenSize.width)), Double(normalizedY * CGFloat(input.screenSize.height)))
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        downPoint = convert(event.locationInWindow, from: nil)
+        downTime = event.timestamp
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard let start = downPoint else { return }
+        downPoint = nil
+        guard let input, input.isReady else { return }
+        let end = convert(event.locationInWindow, from: nil)
+        guard let from = screenPoint(start), let to = screenPoint(end) else { return }
+        if hypot(to.x - from.x, to.y - from.y) > 14 {
+            input.drag(from: from, to: to, durationMs: max(80, min(Int((event.timestamp - downTime) * 1000), 1500)))
+        } else {
+            input.tap(x: to.x, y: to.y)
+        }
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        guard let input, input.isReady, event.deltaY != 0 else { return }
+        let position = convert(event.locationInWindow, from: nil)
+        guard let point = screenPoint(position) else { return }
+        input.scroll(x: point.x, y: point.y, delta: Double(event.deltaY))
+    }
 }
 
 /// Keeps the newest frame so a screenshot can be taken at any moment.

@@ -41,7 +41,7 @@ Mirra is a native macOS app (SwiftUI) for mirroring, controlling and inspecting 
 
 **iPhone / iPad: preview** ⚠️
 
-iOS support is early and lighter than Android. Apple does not let a Mac send touches or keystrokes to an iPhone or iPad, so the screen is view-only.
+iOS support is early and lighter than Android. The screen feed is one-way, but Mirra can inject touches through Apple's WebDriverAgent (built with your own Apple ID) — see the touch-control row below.
 
 | Feature | Status | Needs |
 |---|---|---|
@@ -51,7 +51,8 @@ iOS support is early and lighter than Android. Apple does not let a Mac send tou
 | Two-way text clipboard sync (toggle in the header) | Works (tested with `devicectl`) | Device reachable |
 | Apps list | Works | Developer Mode on the device |
 | Launch, uninstall, install `.ipa` | Not verified yet | Developer Mode on the device |
-| Touch / keyboard control, files, logs | Not possible / not available | Use macOS Universal Control to drive an iPad with your Mac's mouse and keyboard |
+| Touch control (tap / drag / scroll on the mirror) | Built, not yet verified on a device | Your Apple ID in Xcode (free is fine) — Mirra builds WebDriverAgent on the device; a free signature lasts 7 days and must be renewed from the toolbar |
+| Keyboard input, files, logs | Not available | — |
 
 Known issues: the connection label (USB / Wi‑Fi) reported by `devicectl` is not always accurate, and devices that sleep or are locked drop out of the list until they are reachable again.
 
@@ -132,7 +133,7 @@ Mirroring uses `adb exec-out screenrecord`, so latency depends on the phone's en
 
 ## Limitations
 
-- iOS is a preview: view-only screen, no file access or logs; app management needs Developer Mode (see the table above)
+- iOS is a preview: one-way screen with opt-in touch control via WebDriverAgent, no file access or logs; app management needs Developer Mode (see the table above)
 - Typing in the mirror sends ASCII keystrokes; use ⌘V to enter other scripts
 - The clipboard bridge handles text only (no images or files)
 - One active device at a time; Apple Silicon only for now

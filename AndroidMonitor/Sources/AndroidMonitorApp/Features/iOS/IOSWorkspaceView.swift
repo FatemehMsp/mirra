@@ -54,6 +54,7 @@ struct IOSWorkspaceView: View {
     @StateObject private var apps: IOSAppsModel
     @StateObject private var mirror: IOSMirrorModel
     @StateObject private var clipboard: IOSClipboardSync
+    @StateObject private var input: IOSInputController
     @State private var tab = 0
     @State private var query = ""
     @State private var userOnly = true
@@ -64,6 +65,7 @@ struct IOSWorkspaceView: View {
         _apps = StateObject(wrappedValue: IOSAppsModel(device: device))
         _mirror = StateObject(wrappedValue: IOSMirrorModel(udid: device.udid))
         _clipboard = StateObject(wrappedValue: IOSClipboardSync(deviceID: device.id))
+        _input = StateObject(wrappedValue: IOSInputController(udid: device.udid))
     }
 
     var body: some View {
@@ -75,6 +77,7 @@ struct IOSWorkspaceView: View {
                         Text("\(device.model) · iOS \(device.osVersion)").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
+                    IOSControlButton(input: input)
                     IOSIconButton(icon: clipboard.enabled ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath", help: clipboard.enabled ? "Clipboard sync is on (click to turn off)" : "Sync clipboard with the Mac", tint: clipboard.enabled ? Theme.accent : .gray) { clipboard.toggle() }
                     IOSIconButton(icon: "camera.fill", help: "Save screenshot", tint: Theme.accent2) { mirror.saveScreenshot() }
                     IOSIconButton(icon: "doc.on.clipboard", help: "Copy screenshot to clipboard", tint: Theme.accent) { mirror.copyScreenshot() }
@@ -83,9 +86,9 @@ struct IOSWorkspaceView: View {
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(.bar)
                 Divider()
-                IOSMirrorView(model: mirror)
+                IOSMirrorView(model: mirror, input: input)
                     .overlay(alignment: .bottom) {
-                        if let notice = clipboard.status ?? mirror.notice {
+                        if let notice = controlNotice ?? clipboard.status ?? mirror.notice {
                             Text(notice).font(.callout).multilineTextAlignment(.center).frame(maxWidth: 340).padding(.horizontal, 14).padding(.vertical, 8)
                                 .background(.regularMaterial, in: Capsule()).padding(.bottom, 14).allowsHitTesting(false)
                         }
@@ -119,6 +122,14 @@ struct IOSWorkspaceView: View {
                     .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(Text("Drop an .ipa to install").font(.title3.weight(.semibold))).padding(14).allowsHitTesting(false)
             }
+        }
+    }
+
+    /// Progress / failure text for the touch-control feature, or nil when nothing to say.
+    private var controlNotice: String? {
+        switch input.state {
+        case .off, .ready: return nil
+        case .building(let text), .launching(let text), .failed(let text): return text
         }
     }
 
@@ -168,7 +179,7 @@ struct IOSWorkspaceView: View {
             LabeledContent("iOS", value: device.osVersion)
             LabeledContent("Connection", value: device.transport == .usb ? "USB" : "Wi‑Fi")
             LabeledContent("UDID", value: device.udid)
-            Text("iPhone support uses Apple's devicectl (Xcode 15+, iOS 17+). Mirroring is view-only and needs the cable; Apple does not allow remote touch or keyboard input.")
+            Text("Mirroring needs the cable. Touch control is opt-in: it builds Apple's WebDriverAgent on the device and needs your Apple ID in Xcode — with a free account the signature lasts 7 days and must be renewed.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
@@ -187,5 +198,25 @@ private struct IOSIconButton: View {
         }
         .buttonStyle(.plain)
         .help(help)
+    }
+}
+
+/// Toolbar toggle for iOS touch control, reflecting the WDA setup state.
+private struct IOSControlButton: View {
+    @ObservedObject var input: IOSInputController
+
+    var body: some View {
+        switch input.state {
+        case .off:
+            IOSIconButton(icon: "hand.tap", help: "Enable touch control (needs your Apple ID in Xcode; free accounts must renew every 7 days)", tint: .gray) { input.enable() }
+        case .building, .launching:
+            ProgressView().controlSize(.small).frame(width: 30, height: 26)
+        case .ready:
+            IOSIconButton(icon: "hand.tap.fill", help: "Touch control is on — click the mirror to tap (click to turn off)", tint: Theme.accent) { input.disable() }
+        case .failed:
+            IOSIconButton(icon: input.needsRenewal ? "arrow.clockwise" : "hand.tap", help: input.needsRenewal ? "The 7-day signature expired — click to renew" : "Touch control failed — click to retry", tint: .orange) {
+                if input.needsRenewal { input.renew() } else { input.enable() }
+            }
+        }
     }
 }
