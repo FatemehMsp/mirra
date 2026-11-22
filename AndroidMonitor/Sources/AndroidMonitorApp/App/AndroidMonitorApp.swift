@@ -15,11 +15,20 @@ enum MemoryPressure {
 
 @main
 struct AndroidMonitorApp: App {
+    @StateObject private var updates = UpdateModel()
+
     init() { MemoryPressure.start() }
 
     var body: some Scene {
         WindowGroup(AppIdentity.name) {
             MainWindowView()
+                .environmentObject(updates)
+        }
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { updates.checkForUpdates() }
+                    .keyboardShortcut("u", modifiers: [.command])
+            }
         }
     }
 }
