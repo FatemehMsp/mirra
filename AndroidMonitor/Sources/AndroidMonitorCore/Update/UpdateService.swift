@@ -150,7 +150,8 @@ public struct UpdateService: Sendable {
     // MARK: - Install
 
     /// Mounts the DMG, replaces `/Applications/Mirra.app` and relaunches. Run detached after the
-    /// app has quit; the script waits a beat first so the running instance can exit.
+    /// app has quit; the script waits a beat first so the running instance can exit. It deletes
+    /// the previous app before copying and removes the DMG and itself afterwards — no copies left.
     public static func installScript(dmgPath: String) -> String {
         """
         #!/bin/zsh
@@ -165,6 +166,7 @@ public struct UpdateService: Sendable {
         rm -rf /Applications/Mirra.app
         cp -R "$APP" /Applications/Mirra.app
         /usr/bin/hdiutil detach "$MP" -quiet
+        rm -f \(dmgPath) "$0"
         /usr/bin/open /Applications/Mirra.app
         """
     }
