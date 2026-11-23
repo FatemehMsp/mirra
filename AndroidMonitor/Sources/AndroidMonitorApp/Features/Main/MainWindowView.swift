@@ -4,6 +4,7 @@ struct MainWindowView: View {
     @State private var devices: [AndroidDevice] = []
     @State private var iosDevices: [IOSDevice] = []
     @State private var selection: String?
+    @EnvironmentObject private var updates: UpdateModel
 
     var body: some View {
         NavigationSplitView {
@@ -28,11 +29,14 @@ struct MainWindowView: View {
             }
             .background(Theme.backdrop.opacity(0.55))
             .safeAreaInset(edge: .bottom) {
-                Button { PairingWindowController.shared.show() } label: {
-                    Label("Pair over Wi-Fi", systemImage: "wifi").frame(maxWidth: .infinity)
+                VStack(spacing: 8) {
+                    UpdateStatusBar(updates: updates)
+                    Button { PairingWindowController.shared.show() } label: {
+                        Label("Pair over Wi-Fi", systemImage: "wifi").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent).tint(Theme.accent2)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.borderedProminent).tint(Theme.accent2)
-                .controlSize(.large)
                 .padding(10)
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
@@ -68,11 +72,67 @@ struct MainWindowView: View {
             }
         }
         .task {
+            // Update check on launch, then every 7 days while the app runs.
+            updates.checkForUpdates()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(UpdateModel.checkInterval))
+                updates.checkForUpdates()
+            }
+        }
+        .task {
             guard IOSDeviceService.isAvailable else { return }
             while !Task.isCancelled {
                 let latest = (try? await IOSDeviceService().devices()) ?? []
                 if latest != iosDevices { iosDevices = latest }
                 try? await Task.sleep(for: .seconds(6))
+            }
+        }
+    }
+}
+
+/// Sidebar footer row for the self-update flow: available update, download progress, or transient status.
+private struct UpdateStatusBar: View {
+    @ObservedObject var updates: UpdateModel
+
+    var body: some View {
+        switch updates.state {
+        case .idle:
+            EmptyView()
+        case .checking:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Checking for updates…").font(.caption).foregroundStyle(.secondary)
+            }
+        case .upToDate:
+            Label("You're on the latest version", systemImage: "checkmark.circle")
+                .font(.caption).foregroundStyle(.secondary)
+        case .available(let version):
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Update available").font(.caption.weight(.semibold))
+                    Text("Version \(version)").font(.caption2).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Button("Update") { updates.downloadAndInstall() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+            }
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accent.opacity(0.14)))
+        case .downloading(let fraction):
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: fraction)
+                Text("Downloading update… \(Int(fraction * 100))%").font(.caption2).foregroundStyle(.secondary)
+            }
+        case .installing:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Installing… the app will restart.").font(.caption).foregroundStyle(.secondary)
+            }
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: 4) {
+                Text(message).font(.caption).foregroundStyle(.orange).lineLimit(2)
+                Button("Retry") { updates.checkForUpdates() }.controlSize(.small)
             }
         }
     }

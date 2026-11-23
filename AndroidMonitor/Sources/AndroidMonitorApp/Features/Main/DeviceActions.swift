@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 enum DeviceActions {
     static func screenshot(serial: String) {
-        let panel = NSSavePanel(); panel.nameFieldStringValue = "screenshot-\(serial).png"
+        let panel = NSSavePanel(); panel.nameFieldStringValue = CaptureName.file(prefix: "screenshot-\(serial)", fileExtension: "png", date: .now)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task {
             let adb = ADBClient(adbURL: AppADB.url)

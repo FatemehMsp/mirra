@@ -149,14 +149,10 @@ public struct ScreenRecordingService: Sendable {
 
     /// Default file name for a finished recording, e.g. `recording-SM_A325F-20261112-153004.mp4`.
     public static func defaultFileName(model: String, date: Date, timeZone: TimeZone = .current) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = timeZone
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
         let safeModel = model
             .replacingOccurrences(of: "[^A-Za-z0-9]+", with: "-", options: .regularExpression)
             .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return "recording-\(safeModel.isEmpty ? "device" : safeModel)-\(formatter.string(from: date)).mp4"
+        return CaptureName.file(prefix: "recording-\(safeModel.isEmpty ? "device" : safeModel)", fileExtension: "mp4", date: date, timeZone: timeZone)
     }
 
     /// `elapsedLabel(83)` is "01:23".

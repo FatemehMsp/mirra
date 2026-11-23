@@ -63,7 +63,7 @@ final class IOSMirrorModel: ObservableObject {
         guard let image = snapshot(), let png = NSBitmapImageRep(data: image.tiffRepresentation ?? Data())?.representation(using: .png, properties: [:]) else {
             show("No frame yet. Wait until the screen appears."); return
         }
-        let panel = NSSavePanel(); panel.allowedContentTypes = [.png]; panel.nameFieldStringValue = "ios-screenshot.png"
+        let panel = NSSavePanel(); panel.allowedContentTypes = [.png]; panel.nameFieldStringValue = CaptureName.file(prefix: "ios-screenshot", fileExtension: "png", date: .now)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try png.write(to: url, options: .atomic); show("Saved \(url.lastPathComponent)") } catch { show(error.localizedDescription) }
     }
@@ -78,7 +78,7 @@ final class IOSMirrorModel: ObservableObject {
     func toggleRecording() {
         if isRecording { movieOutput.stopRecording(); return }
         guard running else { show("No screen to record yet."); return }
-        let panel = NSSavePanel(); panel.allowedContentTypes = [.quickTimeMovie]; panel.nameFieldStringValue = "ios-recording.mov"
+        let panel = NSSavePanel(); panel.allowedContentTypes = [.quickTimeMovie]; panel.nameFieldStringValue = CaptureName.file(prefix: "ios-recording", fileExtension: "mov", date: .now)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         try? FileManager.default.removeItem(at: url)
         if !session.outputs.contains(movieOutput) {
