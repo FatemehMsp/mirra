@@ -11,7 +11,14 @@ final class RemoteInput {
 
     init(serial: String) { self.serial = serial }
 
-    func stop() { typedTask?.cancel(); process?.terminate(); process = nil; stdin = nil }
+    private var previousIME: String?
+    private var unicodeIMEActive = false
+
+    func stop() {
+        typedTask?.cancel(); process?.terminate(); process = nil; stdin = nil
+        // Leave the device with its own keyboard when the mirror goes away.
+        restoreIME()
+    }
 
     private func ensureShell() -> FileHandle? {
         if let process, process.isRunning, let stdin { return stdin }
@@ -59,10 +66,47 @@ final class RemoteInput {
     /// Pastes the Mac clipboard by typing it; newlines become Enter presses.
     func paste(_ text: String) {
         flushTyped()
+        // Any non-ASCII text needs the ADBKeyboard IME; ASCII keeps the fast path.
+        if text.contains(where: { !$0.isASCII && !$0.isNewline }) {
+            pasteUnicode(text)
+            return
+        }
         let lines = text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
         for (index, line) in lines.enumerated() {
             if !line.isEmpty { typed = line; flushTyped() }
             if index < lines.count - 1 { run("input keyevent 66") }
         }
+    }
+
+    /// Switches to the ADBKeyboard IME on first use (installing it if needed), types the text,
+    /// then switches back to the user's own keyboard.
+    private func pasteUnicode(_ text: String) {
+        let serial = serial
+        Task {
+            let adb = ADBClient(adbURL: AppADB.url)
+            let keyboard = ADBKeyboard(adb: adb, serial: serial)
+            if !(await keyboard.isInstalled()) {
+                let destination = FileManager.default.temporaryDirectory.appendingPathComponent("ADBKeyboard.apk")
+                guard let (data, _) = try? await URLSession.shared.data(from: ADBKeyboard.apkURL),
+                      let _ = try? data.write(to: destination) else { return }
+                _ = try? await adb.run(serial: serial, arguments: ["install", destination.path], timeout: .seconds(60))
+            }
+            if previousIME == nil { previousIME = await keyboard.currentIME() }
+            if await keyboard.activate() {
+                unicodeIMEActive = true
+                try? await keyboard.type(text: text)
+                await keyboard.switchBack()
+                restoreIME()
+            }
+        }
+    }
+
+    private func restoreIME() {
+        guard unicodeIMEActive, let previous = previousIME, !previous.isEmpty else { return }
+        unicodeIMEActive = false
+        previousIME = nil
+        let adb = ADBClient(adbURL: AppADB.url)
+        let serial = serial
+        Task { _ = try? await adb.run(serial: serial, arguments: ["shell", "ime", "set", previous], timeout: .seconds(10)) }
     }
 }

@@ -5,6 +5,7 @@ struct DeviceWorkspaceView: View {
     @AppStorage("mirrorEnabled") private var mirrorEnabled = true
     @StateObject private var installer: DropInstaller
     @ObservedObject private var recorder: ScreenRecorder
+    @StateObject private var crash: CrashWatcherModel
 
     init(device: AndroidDevice) {
         self.device = device
@@ -12,6 +13,7 @@ struct DeviceWorkspaceView: View {
         _recorder = ObservedObject(
             wrappedValue: ScreenRecorderStore.shared.recorder(for: device.serial, deviceName: device.model ?? device.serial)
         )
+        _crash = StateObject(wrappedValue: CrashWatcherModel(serial: device.serial))
     }
 
     var body: some View {
@@ -68,6 +70,8 @@ struct DeviceWorkspaceView: View {
         }
         .onDrop(of: [.fileURL], isTargeted: $installer.targeted) { installer.accept($0) }
         .overlay { DropOverlay(installer: installer) }
+        .onAppear { crash.start() }
+        .onDisappear { crash.stop() }
     }
 }
 
