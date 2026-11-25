@@ -161,6 +161,7 @@ private struct DeviceSection: View {
 
     private static let locales = ["en-US", "en-GB", "fa-IR", "ar-SA", "de-DE", "tr-TR"]
     @State private var locale = "en-GB"
+    @State private var localePackage = ""
     @State private var fontScale = 1.0
     @State private var animationScale = 1.0
     @State private var rotation = 0
@@ -176,11 +177,30 @@ private struct DeviceSection: View {
     var body: some View {
         GroupBox("Device") {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Picker("Language", selection: $locale) {
-                        ForEach(Self.locales, id: \.self) { Text($0) }
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Picker("Language", selection: $locale) {
+                            ForEach(Self.locales, id: \.self) { Text($0) }
+                        }
+                        TextField("Package for app locale", text: $localePackage)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Set") {
+                            run { try await service.setAppLocale(package: localePackage, locale: locale) }
+                        }
+                        .disabled(localePackage.isEmpty || busy)
+                        Button("Clear") {
+                            run { try await service.clearAppLocale(package: localePackage) }
+                        }
+                        .disabled(localePackage.isEmpty || busy)
                     }
-                    Button("Apply") { run { try await service.setLocale(locale) } }.disabled(busy)
+                    HStack(spacing: 8) {
+                        Text("System language can only be changed on the phone itself — the shell cannot write it without root.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                        Button("Open device language settings") {
+                            run { try await service.openLanguageSettings() }
+                        }
+                        .controlSize(.small)
+                    }
                 }
                 HStack(spacing: 8) {
                     Text("Font scale").font(.caption).frame(width: 90, alignment: .leading)
