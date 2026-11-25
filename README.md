@@ -20,9 +20,23 @@ Mirra is a native macOS app (SwiftUI) for mirroring, controlling and inspecting 
 - Live screen mirror (H.264 via `screenrecord`, decoded with VideoToolbox / `AVSampleBufferDisplayLayer`)
 - Mouse click, drag-to-swipe, scroll wheel / trackpad scrolling; right click = Back, middle click = Home
 - Keyboard typing and special keys (Enter, Delete, Tab, arrows, Esc = Back)
+- Unicode typing: with the ADBKeyboard IME (installed on demand), typing from the Mac keyboard — Persian, emoji, any script — lands in the focused field; the phone's own keyboard is restored on disable
 - Clipboard: ⌘V / ⌘C / ⌘X / ⌘A act on the phone, and anything copied on the phone is synced to the Mac (text, full Unicode)
 - Back / Home / Recents / Power buttons, screenshot, screen recording
 - The stream pauses automatically when the window is hidden or the app has been inactive for 5 seconds; a toggle turns the mirror off entirely to save memory
+
+**Screen recording**
+- Device-side `screenrecord` with a live REC timer in the toolbar and a badge over the mirror; recording keeps running with the mirror off, the window hidden or another device selected
+- Quality tiers (8 / 4 / 2 Mbps) picked from the toolbar, remembered across launches; segments are chained past Android's 3-minute cap and merged losslessly
+- Touch markers burned into the saved video (pulsing circles for taps, fading paths for swipes) — both physical touches on the phone and clicks on the mirror
+- Timestamped file names (`recording-SM_A325F-20261112-153004.mp4`); the save panel appears after Stop, never before
+
+**Crash & ANR alerts**
+- Logcat is watched per device; a crash or ANR raises a macOS notification with the stack trace ready to copy
+
+**Daily QA tools**
+- Quick actions: clear app data, grant all runtime permissions, dark / light mode
+- Deep-link launcher: saved links and launch history per device
 
 **Files**
 - Folder browser with size and date, quick links (Internal, Download, DCIM, …)
@@ -64,6 +78,8 @@ Known issues: the connection label (USB / Wi‑Fi) reported by `devicectl` is no
 ## Download
 
 Grab `Mirra.dmg` from the [Releases](../../releases) page, open it and drag **Mirra** to Applications.
+
+**The app updates itself.** It checks GitHub Releases on launch and every 7 days, and you can check manually from the app menu (**Check for Updates…**, ⌘U). When a newer version exists, the sidebar shows an Update button that downloads the DMG, verifies it against the published sha256, replaces the app and relaunches.
 
 - **Not notarized.** The app is not notarized (there is no paid Apple Developer account behind it), so macOS blocks the first launch. Either right-click the app → **Open** → **Open**, or run:
 
