@@ -7,6 +7,7 @@ struct DeviceWorkspaceView: View {
     @ObservedObject private var recorder: ScreenRecorder
     @StateObject private var crash: CrashWatcherModel
     @StateObject private var unicode: UnicodeTypingModel
+    @StateObject private var crashRecorder: CrashRecorder
 
     init(device: AndroidDevice) {
         self.device = device
@@ -16,6 +17,7 @@ struct DeviceWorkspaceView: View {
         )
         _crash = StateObject(wrappedValue: CrashWatcherModel(serial: device.serial))
         _unicode = StateObject(wrappedValue: UnicodeTypingModel(serial: device.serial))
+        _crashRecorder = StateObject(wrappedValue: CrashRecorder(serial: device.serial))
     }
 
     var body: some View {
@@ -67,13 +69,22 @@ struct DeviceWorkspaceView: View {
                 }
             }
             .frame(minWidth: 380, idealWidth: 460)
-            InspectorPanels(serial: device.serial, unicode: unicode)
+            InspectorPanels(serial: device.serial, unicode: unicode, crashRecorder: crashRecorder)
                 .frame(minWidth: 420)
         }
         .onDrop(of: [.fileURL], isTargeted: $installer.targeted) { installer.accept($0) }
         .overlay { DropOverlay(installer: installer) }
-        .onAppear { crash.start() }
-        .onDisappear { crash.stop() }
+        .onAppear {
+            crash.start()
+            crash.onEvent = { [weak crashRecorder] event in
+                crashRecorder?.trigger(reason: event.summary)
+            }
+        }
+        .onDisappear {
+            crash.onEvent = nil
+            crash.stop()
+            crashRecorder.disarm()
+        }
     }
 }
 

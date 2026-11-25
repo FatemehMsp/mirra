@@ -8,15 +8,17 @@ struct InspectorPanels: View {
     @State private var tab = Tab.files
     @StateObject private var links: DeepLinkStore
     @ObservedObject var unicode: UnicodeTypingModel
+    @ObservedObject var crashRecorder: CrashRecorder
 
-    init(serial: String, unicode: UnicodeTypingModel) {
+    init(serial: String, unicode: UnicodeTypingModel, crashRecorder: CrashRecorder) {
         self.serial = serial
         self.unicode = unicode
+        self.crashRecorder = crashRecorder
         _links = StateObject(wrappedValue: DeepLinkStore(serial: serial))
     }
 
     enum Tab: String, CaseIterable {
-        case files = "Files", apps = "Apps", data = "Data", logcat = "Logcat", actions = "Actions", links = "Links", shell = "Shell", info = "Info"
+        case files = "Files", apps = "Apps", data = "Data", logcat = "Logcat", actions = "Actions", links = "Links", tools = "Tools", shell = "Shell", info = "Info"
         var icon: String {
             switch self {
             case .files: return "folder.fill"
@@ -25,6 +27,7 @@ struct InspectorPanels: View {
             case .logcat: return "text.alignleft"
             case .actions: return "bolt.fill"
             case .links: return "link"
+            case .tools: return "wrench.and.screwdriver.fill"
             case .shell: return "terminal.fill"
             case .info: return "info.circle.fill"
             }
@@ -37,6 +40,7 @@ struct InspectorPanels: View {
             case .logcat: return .orange
             case .actions: return .red
             case .links: return .blue
+            case .tools: return .indigo
             case .shell: return .pink
             case .info: return Theme.accent2
             }
@@ -45,18 +49,21 @@ struct InspectorPanels: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 4) {
+            // A wrapping flow layout keeps every tab visible on one or two rows; nine tabs do
+            // not fit a narrow panel, and hidden (scrolled-off) tabs looked broken.
+            TabFlowLayout(spacing: 4) {
                 ForEach(Tab.allCases, id: \.self) { item in
                     Button { tab = item } label: {
                         Label(item.rawValue, systemImage: item.icon)
                             .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                            .fixedSize()
                             .padding(.horizontal, 10).padding(.vertical, 6)
                             .foregroundStyle(tab == item ? Color.white : Color.secondary)
                             .background(Capsule().fill(tab == item ? item.color.opacity(0.75) : Color.clear))
                     }
                     .buttonStyle(.plain)
                 }
-                Spacer()
             }
             .padding(.horizontal, 10).padding(.vertical, 8)
             .background(.bar)
@@ -66,8 +73,9 @@ struct InspectorPanels: View {
                 page(.apps) { AppsPanel(serial: serial) }
                 page(.data) { DataPanel(serial: serial) }
                 page(.logcat) { LogcatPanel(serial: serial, active: tab == .logcat) }
-                page(.actions) { ActionsPanel(serial: serial, unicode: unicode) }
+                page(.actions) { ActionsPanel(serial: serial, unicode: unicode, crashRecorder: crashRecorder) }
                 page(.links) { DeepLinksPanel(store: links) }
+                page(.tools) { ToolsPanel(serial: serial) }
                 page(.shell) { ShellPanel(serial: serial) }
                 page(.info) { InfoPanel(serial: serial) }
             }
