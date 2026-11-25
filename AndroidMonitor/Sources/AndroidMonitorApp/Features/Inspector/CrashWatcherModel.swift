@@ -7,6 +7,8 @@ import UserNotifications
 final class CrashWatcherModel: ObservableObject {
     @Published var enabled = true
     @Published private(set) var lastEvent: CrashEvent?
+    /// Set by the workspace so a crash can freeze the ring-buffer recorder.
+    var onEvent: ((CrashEvent) -> Void)?
 
     private var task: Task<Void, Never>?
     private let serial: String
@@ -30,6 +32,7 @@ final class CrashWatcherModel: ObservableObject {
                         if let event = self.process(line: line) {
                             self.lastEvent = event
                             self.notify(event)
+                            self.onEvent?(event)
                         }
                     }
                 }
