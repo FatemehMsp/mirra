@@ -38,9 +38,9 @@ final class UnicodeTypingModel: ObservableObject {
                 previousIME = await keyboard.currentIME()
                 if await keyboard.activate() {
                     enabled = true
-                    status = "Unicode typing is on. Click the mirror and type."
+                    status = "Unicode typing is on. Tap a text field on the phone, click the mirror and type."
                 } else {
-                    status = "Could not switch keyboard — enable ADBKeyboard in the device's IME settings, then try again."
+                    status = "Could not switch the keyboard — enable ADBKeyboard in the device's IME settings, then try again."
                 }
             } catch {
                 status = "Enable failed: \(error.localizedDescription)"

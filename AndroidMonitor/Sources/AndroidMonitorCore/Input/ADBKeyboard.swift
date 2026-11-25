@@ -35,12 +35,13 @@ public struct ADBKeyboard: Sendable {
         return result.map { String(decoding: $0.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
     }
 
-    /// Switches the device to the ADBKeyboard IME. Returns false when the device needs a manual
-    /// step (some Samsung builds require selecting it in the IME picker).
+    /// Enables and selects the ADBKeyboard IME. `ime set` alone fails on some Samsung builds
+    /// when the IME was never enabled, so enable first; success is verified by reading the
+    /// secure setting back rather than parsing command output.
     public func activate() async -> Bool {
-        let result = try? await adb.run(serial: serial, arguments: ["shell", "ime", "set", Self.ime], timeout: .seconds(10))
-        let output = result.map { String(decoding: $0.stdout, as: UTF8.self) } ?? ""
-        return !output.localizedCaseInsensitiveContains("error")
+        _ = try? await adb.run(serial: serial, arguments: ["shell", "ime", "enable", Self.ime], timeout: .seconds(10))
+        _ = try? await adb.run(serial: serial, arguments: ["shell", "ime", "set", Self.ime], timeout: .seconds(10))
+        return await currentIME().contains(Self.package)
     }
 
     // MARK: - Typing
