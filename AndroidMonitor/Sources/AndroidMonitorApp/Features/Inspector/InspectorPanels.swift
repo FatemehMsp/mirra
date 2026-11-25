@@ -7,9 +7,11 @@ struct InspectorPanels: View {
     let serial: String
     @State private var tab = Tab.files
     @StateObject private var links: DeepLinkStore
+    @ObservedObject var unicode: UnicodeTypingModel
 
-    init(serial: String) {
+    init(serial: String, unicode: UnicodeTypingModel) {
         self.serial = serial
+        self.unicode = unicode
         _links = StateObject(wrappedValue: DeepLinkStore(serial: serial))
     }
 
@@ -64,7 +66,7 @@ struct InspectorPanels: View {
                 page(.apps) { AppsPanel(serial: serial) }
                 page(.data) { DataPanel(serial: serial) }
                 page(.logcat) { LogcatPanel(serial: serial, active: tab == .logcat) }
-                page(.actions) { ActionsPanel(serial: serial) }
+                page(.actions) { ActionsPanel(serial: serial, unicode: unicode) }
                 page(.links) { DeepLinksPanel(store: links) }
                 page(.shell) { ShellPanel(serial: serial) }
                 page(.info) { InfoPanel(serial: serial) }

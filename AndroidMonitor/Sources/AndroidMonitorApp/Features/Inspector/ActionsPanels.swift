@@ -5,6 +5,7 @@ import SwiftUI
 /// and enable Unicode typing through the ADBKeyboard IME.
 struct ActionsPanel: View {
     let serial: String
+    @ObservedObject var unicode: UnicodeTypingModel
     @State private var package = ""
     @State private var status = ""
     @State private var busy = false
@@ -32,9 +33,16 @@ struct ActionsPanel: View {
                 }
             }
             Section("Typing") {
-                Text("Enable Unicode typing (Persian, emoji) through the ADBKeyboard IME. The device will use the Mirra keyboard while enabled.")
+                Text("Type from your Mac's keyboard into the device, including Persian and emoji, through the ADBKeyboard IME. While enabled the device uses the Mirra keyboard.")
                     .font(.caption).foregroundStyle(.secondary)
-                Button("Enable Unicode Typing") { enableUnicodeTyping() }.disabled(busy)
+                HStack(spacing: 8) {
+                    if unicode.busy { ProgressView().controlSize(.small) }
+                    Button(unicode.enabled ? "Disable Unicode Typing" : "Enable Unicode Typing") { unicode.toggle() }
+                        .disabled(unicode.busy)
+                }
+                if let status = unicode.status {
+                    Text(status).font(.caption).foregroundStyle(.secondary)
+                }
             }
             if !status.isEmpty {
                 Section { Text(status).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
@@ -57,33 +65,6 @@ struct ActionsPanel: View {
         }
     }
 
-    private func enableUnicodeTyping() {
-        busy = true
-        status = ""
-        let serial = serial
-        Task {
-            let adb = ADBClient(adbURL: AppADB.url)
-            let keyboard = ADBKeyboard(adb: adb, serial: serial)
-            if !(await keyboard.isInstalled()) {
-                status = "Installing ADBKeyboard…"
-                let destination = FileManager.default.temporaryDirectory.appendingPathComponent("ADBKeyboard.apk")
-                do {
-                    let (data, _) = try await URLSession.shared.data(from: ADBKeyboard.apkURL)
-                    try data.write(to: destination)
-                    _ = try await adb.run(serial: serial, arguments: ["install", destination.path], timeout: .seconds(60))
-                } catch {
-                    status = "Install failed: \(error.localizedDescription)"
-                    busy = false
-                    return
-                }
-            }
-            let activated = await keyboard.activate()
-            status = activated
-                ? "Unicode typing is on. Use ⌘V in the mirror to paste text into the focused field."
-                : "Could not switch the keyboard automatically — enable ADBKeyboard in Settings → System → Languages → On-screen keyboard, then tap Enable again."
-            busy = false
-        }
-    }
 }
 
 /// Saved deep links plus a launch history, per device.

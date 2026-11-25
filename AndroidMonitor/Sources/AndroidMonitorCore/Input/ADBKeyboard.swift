@@ -8,6 +8,9 @@ public struct ADBKeyboard: Sendable {
     public static let package = "com.android.adbkeyboard"
     public static let ime = "com.android.adbkeyboard/.AdbIME"
     public static let messageAction = "ADB_INPUT_TEXT"
+    /// The current ADBKeyboard release expects base64 in `ADB_INPUT_B64`; `ADB_INPUT_TEXT` only
+    /// handles plain ASCII reliably. Sending base64 through this action is the correct path.
+    public static let base64Action = "ADB_INPUT_B64"
     public static let previousAction = "ADB_PREVIOUS_KEYBOARD"
 
     private let adb: any ADBServing
@@ -45,7 +48,7 @@ public struct ADBKeyboard: Sendable {
     /// Sends any UTF-8 string through the IME's broadcast receiver. base64 is required for non-ASCII.
     public func type(text: String) async throws {
         let encoded = Data(text.utf8).base64EncodedString()
-        _ = try await adb.run(serial: serial, arguments: ["shell", "am", "broadcast", "-a", Self.messageAction, "--es", "msg", encoded], timeout: .seconds(15))
+        _ = try await adb.run(serial: serial, arguments: ["shell", "am", "broadcast", "-a", Self.base64Action, "--es", "msg", encoded], timeout: .seconds(15))
     }
 
     /// Shows the previous keyboard again (the IME's "switch back" broadcast) when it is known.
