@@ -5,6 +5,8 @@ struct DeviceWorkspaceView: View {
     @AppStorage("mirrorEnabled") private var mirrorEnabled = true
     @StateObject private var installer: DropInstaller
     @ObservedObject private var recorder: ScreenRecorder
+    @StateObject private var crash: CrashWatcherModel
+    @StateObject private var unicode: UnicodeTypingModel
 
     init(device: AndroidDevice) {
         self.device = device
@@ -12,6 +14,8 @@ struct DeviceWorkspaceView: View {
         _recorder = ObservedObject(
             wrappedValue: ScreenRecorderStore.shared.recorder(for: device.serial, deviceName: device.model ?? device.serial)
         )
+        _crash = StateObject(wrappedValue: CrashWatcherModel(serial: device.serial))
+        _unicode = StateObject(wrappedValue: UnicodeTypingModel(serial: device.serial))
     }
 
     var body: some View {
@@ -40,7 +44,7 @@ struct DeviceWorkspaceView: View {
                 ZStack {
                     Theme.backdrop
                     if mirrorEnabled {
-                        H264MirrorView(serial: device.serial)
+                        H264MirrorView(serial: device.serial, unicode: unicode)
                             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.18), lineWidth: 2))
                             .shadow(color: Theme.accent.opacity(0.25), radius: 24)
@@ -63,11 +67,13 @@ struct DeviceWorkspaceView: View {
                 }
             }
             .frame(minWidth: 380, idealWidth: 460)
-            InspectorPanels(serial: device.serial)
+            InspectorPanels(serial: device.serial, unicode: unicode)
                 .frame(minWidth: 420)
         }
         .onDrop(of: [.fileURL], isTargeted: $installer.targeted) { installer.accept($0) }
         .overlay { DropOverlay(installer: installer) }
+        .onAppear { crash.start() }
+        .onDisappear { crash.stop() }
     }
 }
 

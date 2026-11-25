@@ -8,10 +8,19 @@ final class RemoteInput {
     private var stdin: FileHandle?
     private var typed = ""
     private var typedTask: Task<Void, Never>?
+    private let unicode: UnicodeTypingModel
 
-    init(serial: String) { self.serial = serial }
+    init(serial: String, unicode: UnicodeTypingModel) {
+        self.serial = serial
+        self.unicode = unicode
+    }
 
-    func stop() { typedTask?.cancel(); process?.terminate(); process = nil; stdin = nil }
+    var unicodeTyping: UnicodeTypingModel { unicode }
+
+    func stop() {
+        typedTask?.cancel(); process?.terminate(); process = nil; stdin = nil
+        unicode.restoreOnStop()
+    }
 
     private func ensureShell() -> FileHandle? {
         if let process, process.isRunning, let stdin { return stdin }
@@ -36,8 +45,13 @@ final class RemoteInput {
     func swipe(_ x1: Int, _ y1: Int, _ x2: Int, _ y2: Int, durationMs: Int) { run("input swipe \(x1) \(y1) \(x2) \(y2) \(durationMs)") }
     func keyEvents(_ codes: [Int]) { flushTyped(); run("input keyevent " + codes.map(String.init).joined(separator: " ")) }
 
-    /// Batches fast typing into a single `input text` call. `input text` only handles ASCII, so other characters are dropped.
+    /// Batches fast typing into a single `input text` call when Unicode typing is off;
+    /// when on, text goes through the ADBKeyboard IME so Persian and emoji work.
     func type(_ text: String) {
+        if unicode.enabled {
+            unicode.type(text)
+            return
+        }
         typed += text
         typedTask?.cancel()
         typedTask = Task { [weak self] in
@@ -59,6 +73,21 @@ final class RemoteInput {
     /// Pastes the Mac clipboard by typing it; newlines become Enter presses.
     func paste(_ text: String) {
         flushTyped()
+        if unicode.enabled {
+            // The IME handles the whole UTF-8 string, including newlines.
+            unicode.type(text)
+            return
+        }
+        if text.contains(where: { !$0.isASCII && !$0.isNewline }) {
+            // Fall back to enabling Unicode typing on demand for this paste.
+            if !unicode.busy { unicode.toggle() }
+            Task {
+                // Wait for the toggle to finish, then type through the IME.
+                while unicode.busy { try? await Task.sleep(for: .milliseconds(150)) }
+                if unicode.enabled { unicode.type(text) }
+            }
+            return
+        }
         let lines = text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
         for (index, line) in lines.enumerated() {
             if !line.isEmpty { typed = line; flushTyped() }

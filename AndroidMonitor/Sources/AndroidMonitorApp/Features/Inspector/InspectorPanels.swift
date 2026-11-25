@@ -6,15 +6,25 @@ private let adbURL = AppADB.url
 struct InspectorPanels: View {
     let serial: String
     @State private var tab = Tab.files
+    @StateObject private var links: DeepLinkStore
+    @ObservedObject var unicode: UnicodeTypingModel
+
+    init(serial: String, unicode: UnicodeTypingModel) {
+        self.serial = serial
+        self.unicode = unicode
+        _links = StateObject(wrappedValue: DeepLinkStore(serial: serial))
+    }
 
     enum Tab: String, CaseIterable {
-        case files = "Files", apps = "Apps", data = "Data", logcat = "Logcat", shell = "Shell", info = "Info"
+        case files = "Files", apps = "Apps", data = "Data", logcat = "Logcat", actions = "Actions", links = "Links", shell = "Shell", info = "Info"
         var icon: String {
             switch self {
             case .files: return "folder.fill"
             case .apps: return "square.grid.2x2.fill"
             case .data: return "externaldrive.fill"
             case .logcat: return "text.alignleft"
+            case .actions: return "bolt.fill"
+            case .links: return "link"
             case .shell: return "terminal.fill"
             case .info: return "info.circle.fill"
             }
@@ -25,6 +35,8 @@ struct InspectorPanels: View {
             case .apps: return Theme.accent
             case .data: return .purple
             case .logcat: return .orange
+            case .actions: return .red
+            case .links: return .blue
             case .shell: return .pink
             case .info: return Theme.accent2
             }
@@ -54,6 +66,8 @@ struct InspectorPanels: View {
                 page(.apps) { AppsPanel(serial: serial) }
                 page(.data) { DataPanel(serial: serial) }
                 page(.logcat) { LogcatPanel(serial: serial, active: tab == .logcat) }
+                page(.actions) { ActionsPanel(serial: serial, unicode: unicode) }
+                page(.links) { DeepLinksPanel(store: links) }
                 page(.shell) { ShellPanel(serial: serial) }
                 page(.info) { InfoPanel(serial: serial) }
             }

@@ -4,8 +4,9 @@ import SwiftUI
 
 struct H264MirrorView: NSViewRepresentable {
     let serial: String
+    let unicode: UnicodeTypingModel
 
-    func makeCoordinator() -> Coordinator { Coordinator(serial: serial) }
+    func makeCoordinator() -> Coordinator { Coordinator(serial: serial, unicode: unicode) }
 
     func makeNSView(context: Context) -> MirrorSurfaceView {
         let view = MirrorSurfaceView()
@@ -70,7 +71,11 @@ struct H264MirrorView: NSViewRepresentable {
         }
         private var deviceSize = CGSize(width: 1080, height: 2400)
 
-        init(serial: String) { self.serial = serial; self.input = RemoteInput(serial: serial); self.clipboard = PhoneClipboard(serial: serial) }
+        init(serial: String, unicode: UnicodeTypingModel) {
+            self.serial = serial
+            self.input = RemoteInput(serial: serial, unicode: unicode)
+            self.clipboard = PhoneClipboard(serial: serial)
+        }
 
         private var displayLayer: AVSampleBufferDisplayLayer?
         private(set) var paused = false
